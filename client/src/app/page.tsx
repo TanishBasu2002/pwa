@@ -59,6 +59,7 @@ export default function Home() {
   const [message, setMessage] = useState<string>("");
   const [serviceWorkerRegistration, setServiceWorkerRegistration] =
     useState<ServiceWorkerRegistration | null>(null);
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [fileContent, setFileContent] = useState<string>("");
   const [fileName, setFileName] = useState<string>("developer-profile.pdf");
   const [activeTab, setActiveTab] = useState<string>("profile");
