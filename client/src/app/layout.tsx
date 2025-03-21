@@ -1,12 +1,17 @@
 import "./globals.css";
-import { Metadata } from "next";
+import { Metadata, Viewport } from "next";
 
 export const metadata: Metadata = {
   title: "Simple PWA",
   description: "A simple PWA with installation and notifications",
   manifest: "/manifest.json",
+};
+
+export const viewport: Viewport = {
   themeColor: "#4285f4",
-  viewport: "width=device-width, initial-scale=1, maximum-scale=1",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({
