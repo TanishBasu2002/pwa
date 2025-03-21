@@ -1,3 +1,4 @@
+// File: src/app/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -16,10 +17,19 @@ interface ApiResponse {
   error?: string;
 }
 
+// Define a more specific type for the install prompt event
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[];
+  readonly userChoice: Promise<{
+    outcome: "accepted" | "dismissed";
+    platform: string;
+  }>;
+  prompt(): Promise<void>;
+}
+
 export default function Home() {
-  const [installPrompt, setInstallPrompt] = useState<any>(null);
-  const [notificationPermission, setNotificationPermission] =
-    useState<NotificationPermission>("default");
+  const [installPrompt, setInstallPrompt] =
+    useState<BeforeInstallPromptEvent | null>(null);
   const [message, setMessage] = useState<string>("");
   const [serviceWorkerRegistration, setServiceWorkerRegistration] =
     useState<ServiceWorkerRegistration | null>(null);
@@ -37,13 +47,8 @@ export default function Home() {
       // Prevent Chrome 67 and earlier from automatically showing the prompt
       e.preventDefault();
       // Store the event so it can be triggered later
-      setInstallPrompt(e);
+      setInstallPrompt(e as BeforeInstallPromptEvent);
     });
-
-    // Check notification permission
-    if ("Notification" in window) {
-      setNotificationPermission(Notification.permission);
-    }
 
     // Register service worker
     if ("serviceWorker" in navigator) {
@@ -157,7 +162,6 @@ export default function Home() {
     } else if (Notification.permission !== "denied") {
       // Request permission
       const permission = await Notification.requestPermission();
-      setNotificationPermission(permission);
 
       if (permission === "granted") {
         setMessage(
