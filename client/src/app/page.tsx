@@ -59,7 +59,6 @@ export default function Home() {
   const [message, setMessage] = useState<string>("");
   const [serviceWorkerRegistration, setServiceWorkerRegistration] =
     useState<ServiceWorkerRegistration | null>(null);
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [fileContent, setFileContent] = useState<string>("");
   const [fileName, setFileName] = useState<string>("developer-profile.pdf");
   const [activeTab, setActiveTab] = useState<string>("profile");
@@ -329,61 +328,27 @@ Generated on: ${new Date().toString()}
     }
 
     if (Notification.permission === "granted") {
-      // Send notification through our backend API
       try {
-        const payload: NotificationPayload = {
+        const payload = {
           title: "Hello from PWA",
           body: "This is a test notification",
         };
 
-        // First, check if we have a subscription
-        if (serviceWorkerRegistration) {
-          const subscription =
-            await serviceWorkerRegistration.pushManager.getSubscription();
+        // Use Next.js API route for sending notification
+        const response = await fetch("/api/notifications", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(payload),
+        });
 
-          if (!subscription) {
-            // We need to subscribe first
-            const response = await fetch(
-              `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/vapid-public-key`,
-            );
-            const { publicKey } = await response.json();
+        const data = await response.json();
 
-            const convertedVapidKey = urlBase64ToUint8Array(publicKey);
-
-            await serviceWorkerRegistration.pushManager.subscribe({
-              userVisibleOnly: true,
-              applicationServerKey: convertedVapidKey,
-            });
-
-            setMessage(
-              "Subscribed to notifications. Click again to receive one.",
-            );
-            return;
-          }
-
-          // We have a subscription, send the notification
-          const response = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/send-notification`,
-            {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(payload),
-            },
-          );
-
-          const data: ApiResponse = await response.json();
-
-          if (data.success) {
-            setMessage("Notification sent successfully!");
-          } else {
-            setMessage(`Failed to send notification: ${data.error}`);
-          }
+        if (data.success) {
+          setMessage("Notification sent successfully!");
         } else {
-          setMessage(
-            "Service worker not registered. Cannot send notifications.",
-          );
+          setMessage(`Failed to send notification: ${data.error}`);
         }
       } catch (error) {
         console.error("Error sending notification:", error);
