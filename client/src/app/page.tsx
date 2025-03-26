@@ -3,19 +3,6 @@
 import { useState, useEffect } from "react";
 import { jsPDF } from "jspdf";
 
-// TypeScript interfaces
-interface NotificationPayload {
-  title: string;
-  body: string;
-  url?: string;
-}
-
-interface ApiResponse {
-  success: boolean;
-  message: string;
-  error?: string;
-}
-
 // Define a more specific type for the install prompt event
 interface BeforeInstallPromptEvent extends Event {
   readonly platforms: string[];
@@ -59,6 +46,7 @@ export default function Home() {
   const [message, setMessage] = useState<string>("");
   const [serviceWorkerRegistration, setServiceWorkerRegistration] =
     useState<ServiceWorkerRegistration | null>(null);
+  // tslint:disable-next-line @ts-ignore
   const [fileContent, setFileContent] = useState<string>("");
   const [fileName, setFileName] = useState<string>("developer-profile.pdf");
   const [activeTab, setActiveTab] = useState<string>("profile");
@@ -321,6 +309,30 @@ Generated on: ${new Date().toString()}
     }
   };
 
+  const subscribeToPushNotifications =
+    async (): Promise<PushSubscription | null> => {
+      if (!serviceWorkerRegistration) {
+        console.error("Service worker not registered");
+        return null;
+      }
+
+      try {
+        const subscription =
+          await serviceWorkerRegistration.pushManager.subscribe({
+            userVisibleOnly: true,
+            applicationServerKey: urlBase64ToUint8Array(
+              process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || "",
+            ),
+          });
+
+        console.log("Push subscription successful", subscription);
+        return subscription;
+      } catch (error) {
+        console.error("Error subscribing to push notifications:", error);
+        return null;
+      }
+    };
+
   const handleNotificationClick = async (): Promise<void> => {
     if (!("Notification" in window)) {
       setMessage("This browser does not support notifications");
@@ -329,12 +341,32 @@ Generated on: ${new Date().toString()}
 
     if (Notification.permission === "granted") {
       try {
+        // First ensure we're subscribed to push
+        const subscription = await subscribeToPushNotifications();
+        if (!subscription) {
+          setMessage("Failed to subscribe to push notifications");
+          return;
+        }
+
+        // Store the subscription
+        const storeResponse = await fetch("/api/notifications", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(subscription),
+        });
+
+        if (!storeResponse.ok) {
+          throw new Error("Failed to store subscription");
+        }
+
+        // Send test notification
         const payload = {
           title: "Hello from PWA",
           body: "This is a test notification",
         };
 
-        // Use Next.js API route for sending notification
         const response = await fetch("/api/notifications", {
           method: "POST",
           headers: {
@@ -355,7 +387,6 @@ Generated on: ${new Date().toString()}
         setMessage("Error sending notification");
       }
     } else if (Notification.permission !== "denied") {
-      // Request permission
       const permission = await Notification.requestPermission();
 
       if (permission === "granted") {
@@ -369,7 +400,6 @@ Generated on: ${new Date().toString()}
       setMessage("Please enable notifications in your browser settings");
     }
   };
-
   // Helper function to convert VAPID key from base64 to Uint8Array
   const urlBase64ToUint8Array = (base64String: string): Uint8Array => {
     const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
